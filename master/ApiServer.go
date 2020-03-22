@@ -155,7 +155,80 @@ ERR:
 	if bytes, err = common.BuildResponse(-1, err.Error(), nil); err == nil {
 		resp.Write(bytes)
 	}
+}
 
+// 查询任务日志
+func handleJobLog(resp http.ResponseWriter, req *http.Request) {
+	var (
+		err        error
+		name       string // 任务名称
+		skipParam  string // 从第几条开始
+		limitParam string // 返回多少条
+		skip       int
+		limit      int
+		bytes      []byte
+		logArr     []*common.JobLog
+	)
+	// 接续Get参数
+	if err = req.ParseForm(); err != nil {
+		goto ERR
+	}
+
+	// 获取请求参数 /job/log?name=job10&skip=0&limit=10
+	name = req.Form.Get("name")
+	skipParam = req.Form.Get("skip")
+	limitParam = req.Form.Get("limit")
+	if skip, err = strconv.Atoi(skipParam); err != nil {
+		skip = 0
+	}
+
+	if limit, err = strconv.Atoi(limitParam); err != nil {
+		limit = 20
+	}
+
+	if logArr, err = G_logMgr.ListLog(name, skip, limit); err != nil {
+		goto ERR
+	}
+
+	//返回正常应答
+	if bytes, err = common.BuildResponse(0, "success", logArr); err == nil {
+		resp.Write(bytes)
+	}
+
+	return
+
+ERR:
+	// 返回异常应答
+	if bytes, err = common.BuildResponse(-1, err.Error(), nil); err == nil {
+		resp.Write(bytes)
+	}
+
+}
+
+// 获取健康worker节点列表
+func handleWorkerList(resp http.ResponseWriter, req *http.Request) {
+	var (
+		workerArr []string
+		err       error
+		bytes     []byte
+	)
+
+	if workerArr, err = G_workerMgr.ListWorkers(); err != nil {
+		goto ERR
+	}
+
+	//返回正常应答
+	if bytes, err = common.BuildResponse(0, "success", workerArr); err == nil {
+		resp.Write(bytes)
+	}
+
+	return
+
+ERR:
+	// 返回异常应答
+	if bytes, err = common.BuildResponse(-1, err.Error(), nil); err == nil {
+		resp.Write(bytes)
+	}
 }
 
 // 初始化服务
@@ -173,11 +246,13 @@ func InitApiServer() (err error) {
 	mux.HandleFunc("/job/delete", handleJobDelete)
 	mux.HandleFunc("/job/list", handleJobList)
 	mux.HandleFunc("/job/kill", handleJobKill)
+	mux.HandleFunc("/job/log", handleJobLog)
+	mux.HandleFunc("/worker/list", handleWorkerList)
 
 	// 静态文件目录
 	staticDir = http.Dir(G_config.WebRoot)
 	staticHandler = http.FileServer(staticDir)
-	mux.Handle("/",http.StripPrefix("/",staticHandler))
+	mux.Handle("/", http.StripPrefix("/", staticHandler))
 
 	// 启动TCP监听
 	if listener, err = net.Listen("tcp", ":"+strconv.Itoa(G_config.ApiPort)); err != nil {

@@ -37,8 +37,18 @@ func main() {
 	// 初始化线程
 	initEnv()
 
-	// 初始化配置
+	// 加载配置
 	if err = master.InitConfig(confFile); err != nil {
+		goto ERR
+	}
+
+	// 初始化服务发现模块
+	if err = master.InitWorkerMgr(); err != nil {
+		goto ERR
+	}
+
+	// 日志管理器
+	if err = master.InitLogMgr(); err != nil {
 		goto ERR
 	}
 

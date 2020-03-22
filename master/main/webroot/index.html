@@ -25,6 +25,7 @@
         <div class="row">
             <div class="col-md-12">
                 <button type="button" class="btn btn-primary" id="new-job">新建任务</button>
+                <button type="button" class="btn btn-success" id="list-worker">健康节点</button>
             </div>
         </div>
 
@@ -83,9 +84,95 @@
         </div><!-- /.modal-dialog -->
     </div><!-- /.modal -->
 
+    <!-- 日志模态框 -->
+    <div id="log-modal" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">任务日志</h4>
+                </div>
+                <div class="modal-body">
+                   <table id="log-list" class="table table-striped">
+                       <thead>
+                       <tr>
+                           <th>shell命令</th>
+                           <th>错误原因</th>
+                           <th>脚本输出</th>
+                           <th>计划开始时间</th>
+                           <th>实际调度时间</th>
+                           <th>开始执行时间</th>
+                           <th>执行结束时间</th>
+                       </tr>
+                       </thead>
+                       <tbody>
+
+                       </tbody>
+                   </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                </div>
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
+    <!-- 健康节点模态框 -->
+    <div id="worker-modal" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">健康节点</h4>
+                </div>
+                <div class="modal-body">
+                    <table id="worker-list" class="table table-striped">
+                        <thead>
+                        <tr>
+                            <th>节点IP</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                </div>
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
     <script>
         // 页面加载完成后，回调函数
         $(document).ready(function () {
+
+            // 时间格式化函数
+            function timeFormat(millsecond){
+                // 前缀补0：2020-03-22 22:19:30.345
+                function paddingNum(num,n) {
+                    var len = num.toString().length
+                    while (len < n){
+                        num = '0' + num;
+                        len++;
+                    }
+                    return num
+                }
+
+                var date = new Date(millsecond);
+                var year = date.getFullYear();
+                var month = paddingNum(date.getMonth()+1,2);
+                var day = paddingNum(date.getDate(),2)
+                var hour = paddingNum(date.getHours(),2)
+                var minute = paddingNum(date.getMinutes(),2)
+                var second = paddingNum(date.getSeconds(),2)
+                var millSecond = paddingNum(date.getMilliseconds(),3)
+
+                return year + "-" + month + "-" + day + " "+ hour + ":" + minute + ":" + second + "." + millSecond;
+
+            }
+
             // 1、绑定按钮的事件处理函数
             // 用JavaScript的委托机制，DOM事件冒泡的关键原理
             $("#job-list").on('click','.edit-job',function (event) {
@@ -98,7 +185,7 @@
                 $("#edit-modal").modal("show");
             });
 
-            // 编辑任务
+            // 删除任务
             $("#job-list").on('click','.delete-job',function (event) {
                 var jobName = $(this).parents("tr").children(".job-name").text();
                 $.ajax({
@@ -126,6 +213,47 @@
                 })
             });
 
+            // 查看任务日志
+            $("#job-list").on('click','.log-job',function (event) {
+
+                // 清空日志列表
+                $("#log-list tbody").empty();
+
+                // 获取人物名
+                var jobName = $(this).parents("tr").children(".job-name").text();
+
+                // 请求/job/list接口
+                $.ajax({
+                    url:"/job/log",
+                    dataType:"json",
+                    data:{name:jobName},
+                    success:function (resp) {
+                        if (resp.errno != 0){
+                            return
+                        }
+
+                        // 遍历日志
+                        var logList = resp.data;
+                        for (var i = 0; i < logList.length ; ++i){
+                            var log = logList[i];
+                            var tr = $('<tr>')
+                            tr.append($("<td>").html(log.command));
+                            tr.append($("<td>").html(log.err));
+                            tr.append($("<td>").html(log.output));
+                            tr.append($("<td>").html(timeFormat(log.planTime)));
+                            tr.append($("<td>").html(timeFormat(log.scheduleTime)));
+                            tr.append($("<td>").html(timeFormat(log.startTime)));
+                            tr.append($("<td>").html(timeFormat(log.endTime)));
+
+                            $("#log-list tbody").append(tr);
+                        }
+                    }
+                });
+
+                // 弹出模态框
+                $("#log-modal").modal("show");
+            });
+
             // 保存任务
             $("#save-job").on('click',function () {
                 var jobInfo = {name:$("#edit-name").val(),command:$("#edit-command").val(),cronExpr:$("#edit-cronExpr").val()};
@@ -147,6 +275,36 @@
                 $("#edit-cronExpr").val("");
 
                 $("#edit-modal").modal("show");
+            });
+
+            // 查看健康节点
+            $("#list-worker").on('click',function () {
+                // 清空健康节点列表
+                $("#worker-list tbody").empty();
+
+                // 请求/worker/list接口
+                $.ajax({
+                    url:"/worker/list",
+                    dataType:"json",
+                    success:function (resp) {
+                        if (resp.errno != 0){
+                            return
+                        }
+
+                        // 遍历每一个IP
+                        var workerList = resp.data;
+                        for (var i = 0; i < workerList.length ; ++i){
+                            var ip = workerList[i];
+                            var tr = $('<tr>');
+                            tr.append($("<td>").html(ip));
+
+                            $("#worker-list tbody").append(tr);
+                        }
+                    }
+                });
+
+                // 弹出模态框
+                $("#worker-modal").modal("show");
             });
 
 
@@ -178,7 +336,8 @@
                             var toolbar = $('<div class="btn-toolbar">')
                                 .append($('<button class="btn btn-info edit-job">').html("编辑"))
                                 .append($('<button class="btn btn-danger delete-job">').html("删除"))
-                                .append($('<button class="btn btn-warning kill-job">').html("强杀"));
+                                .append($('<button class="btn btn-warning kill-job">').html("强杀"))
+                                .append($('<button class="btn btn-success log-job">').html("日志"));
                             tr.append($('<td>').append(toolbar));
                             $("#job-list tbody").append(tr)
                         }

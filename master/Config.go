@@ -7,12 +7,14 @@ import (
 
 // 程序配置
 type Config struct {
-	ApiPort         int      `json:"apiPort"`
-	ApiReadTimeOut  int      `json:apiReadTimeout`
-	ApiWriteTimeOut int      `json:apiWriteTimeout`
-	EtcdEndPoints   []string `json:"etcdEndpoints"`
-	EtcdDailTimeout int      `json:"etcdDailTimeout"`
-	WebRoot         string   `json:"webroot"`
+	ApiPort                  int      `json:"apiPort"`
+	ApiReadTimeOut           int      `json:apiReadTimeout`
+	ApiWriteTimeOut          int      `json:apiWriteTimeout`
+	EtcdEndPoints            []string `json:"etcdEndpoints"`
+	EtcdDailTimeout          int      `json:"etcdDailTimeout"`
+	WebRoot                  string   `json:"webroot"`
+	MongodbUri               string   `json:"mongodbUri`
+	MongodbConnectionTimeout int      `json:"mongodbConnectionTimeout"`
 }
 
 // 单例
