@@ -144,7 +144,30 @@
         </div><!-- /.modal-dialog -->
     </div><!-- /.modal -->
 
-    <script>
+
+
+    <!-- 模态框（Modal）弹出层 -START -->
+    <!-- 万能确认框 -->
+    <div id="delete-confirm" class="modal fade">
+        <div class="modal-dialog">
+            <div class="modal-content message_align">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                    <h4 class="modal-title">确认信息</h4>
+                </div>
+                <div class="modal-body">
+                    <p id="delcfmMsg">您确认要删除吗？</p>
+                </div>
+                <div class="modal-footer">
+                    <input type="hidden" id="jobNameToDelete" value=""/>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-danger" id="to-delete">删除</button>
+                </div>
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+
+
+        <script>
         // 页面加载完成后，回调函数
         $(document).ready(function () {
 
@@ -188,6 +211,13 @@
             // 删除任务
             $("#job-list").on('click','.delete-job',function (event) {
                 var jobName = $(this).parents("tr").children(".job-name").text();
+                $("#jobNameToDelete").val(jobName);
+
+                $("#delete-confirm").modal("show")
+            });
+
+            $("#to-delete").on('click',function (event) {
+                var jobName = $("#jobNameToDelete").val();
                 $.ajax({
                     url: "/job/delete",
                     type:"post",
