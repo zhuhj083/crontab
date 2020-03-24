@@ -2,9 +2,9 @@ package worker
 
 import (
 	"context"
-	"github.com/mongodb/mongo-go-driver/mongo"
-	"github.com/mongodb/mongo-go-driver/mongo/clientopt"
 	"github.com/zhuhj083/crontab/common"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"time"
 )
 
@@ -84,14 +84,11 @@ func (logSink *LogSink) writeLoop() {
 func InitLogSink() (err error) {
 	var (
 		client *mongo.Client
+		ctx    context.Context
 	)
 
-	if client, err = mongo.Connect(
-		context.TODO(),
-		G_config.MongodbUri,
-		clientopt.ConnectTimeout(time.Duration(G_config.MongodbConnectionTimeout)*time.Millisecond)); err != nil {
-		return
-	}
+	ctx, _ = context.WithTimeout(context.Background(), time.Duration(G_config.MongodbConnectionTimeout)*time.Second)
+	client, err = mongo.Connect(ctx, options.Client().ApplyURI(G_config.MongodbUri))
 
 	G_logSink = &LogSink{
 		client:         client,
